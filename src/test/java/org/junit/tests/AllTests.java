@@ -7,6 +7,13 @@ import org.junit.internal.matchers.StacktracePrintingMatcherTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
+import org.junit.test.EventCollectorMatchersTest;
+import org.junit.test.EventCollectorTest;
+import org.junit.test.JUnitSelfTestRunnerTest;
+import org.junit.test.internal.AtLeastOneEventTest;
+import org.junit.test.internal.HasDisplayNameTest;
+import org.junit.test.internal.HasMessageTest;
+import org.junit.test.internal.NumberOfEventsTest;
 import org.junit.tests.assertion.AssertionTest;
 import org.junit.tests.assertion.MultipleFailureExceptionTest;
 import org.junit.tests.deprecated.JUnit4ClassRunnerTest;
@@ -161,6 +168,13 @@ import org.junit.tests.validation.ValidationTest;
 	MethodSorterTest.class,
 	TestedOnSupplierTest.class,
 	StacktracePrintingMatcherTest.class
+	AtLeastOneEventTest.class,
+	HasDisplayNameTest.class,
+	HasMessageTest.class,
+	NumberOfEventsTest.class,
+	EventCollectorMatchersTest.class,
+	EventCollectorTest.class,
+	JUnitSelfTestRunnerTest.class
 })
 public class AllTests {
 	public static Test suite() {
