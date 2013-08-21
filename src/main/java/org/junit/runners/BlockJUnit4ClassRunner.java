@@ -29,6 +29,8 @@ import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.MultipleFailureException;
 import org.junit.runners.model.Statement;
+import org.junit.runners.validation.OnlyOneConstructor;
+import org.junit.runners.validation.TestClassValidator;
 
 /**
  * Implements the JUnit 4 standard test case class model, as defined by the
@@ -55,6 +57,7 @@ import org.junit.runners.model.Statement;
  * @since 4.5
  */
 public class BlockJUnit4ClassRunner extends ParentRunner<FrameworkMethod> {
+    private static final TestClassValidator ONLY_ONE_CONSTRUCTOR = new OnlyOneConstructor();
     private final ConcurrentHashMap<FrameworkMethod, Description> methodDescriptions = new ConcurrentHashMap<FrameworkMethod, Description>();
     /**
      * Creates a BlockJUnit4ClassRunner to run {@code klass}
@@ -153,10 +156,7 @@ public class BlockJUnit4ClassRunner extends ParentRunner<FrameworkMethod> {
      * (do not override)
      */
     protected void validateOnlyOneConstructor(List<Throwable> errors) {
-        if (!hasOneConstructor()) {
-            String gripe = "Test class should have exactly one public constructor";
-            errors.add(new Exception(gripe));
-        }
+        ONLY_ONE_CONSTRUCTOR.validateTestClass(getTestClass(), errors);
     }
 
     /**

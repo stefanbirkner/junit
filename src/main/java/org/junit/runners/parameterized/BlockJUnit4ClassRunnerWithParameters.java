@@ -11,6 +11,8 @@ import org.junit.runners.model.FrameworkField;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.Statement;
+import org.junit.runners.validation.OnlyOneConstructor;
+import org.junit.runners.validation.TestClassValidator;
 
 /**
  * A {@link BlockJUnit4ClassRunner} with parameters support. Parameters can be
@@ -18,6 +20,7 @@ import org.junit.runners.model.Statement;
  */
 public class BlockJUnit4ClassRunnerWithParameters extends
         BlockJUnit4ClassRunner {
+    private static final TestClassValidator ONLY_ONE_CONSTRUCTOR = new OnlyOneConstructor();
     private final Object[] parameters;
 
     private final String name;
@@ -85,7 +88,7 @@ public class BlockJUnit4ClassRunnerWithParameters extends
 
     @Override
     protected void validateConstructor(List<Throwable> errors) {
-        validateOnlyOneConstructor(errors);
+        ONLY_ONE_CONSTRUCTOR.validateTestClass(getTestClass(), errors);
         if (fieldsAreAnnotated()) {
             validateZeroArgConstructor(errors);
         }

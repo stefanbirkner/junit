@@ -17,6 +17,7 @@ import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.Statement;
 import org.junit.runners.model.TestClass;
+import org.junit.runners.validation.*;
 
 /**
  * The Theories runner allows to test a certain functionality against a subset of an infinite set of data points.
@@ -69,6 +70,8 @@ import org.junit.runners.model.TestClass;
  * @see <a href="http://web.archive.org/web/20110608210825/http://shareandenjoy.saff.net/tdd-specifications.pdf">Paper on Theories</a>
  */
 public class Theories extends BlockJUnit4ClassRunner {
+    private static final TestClassValidator ONLY_ONE_CONSTRUCTOR = new OnlyOneConstructor();
+
     public Theories(Class<?> klass) throws InitializationError {
         super(klass);
     }
@@ -114,7 +117,7 @@ public class Theories extends BlockJUnit4ClassRunner {
 
     @Override
     protected void validateConstructor(List<Throwable> errors) {
-        validateOnlyOneConstructor(errors);
+        ONLY_ONE_CONSTRUCTOR.validateTestClass(getTestClass(), errors);
     }
 
     @Override
