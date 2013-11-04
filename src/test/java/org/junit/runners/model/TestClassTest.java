@@ -4,18 +4,15 @@ import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
-import java.lang.annotation.Annotation;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import org.hamcrest.CoreMatchers;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.theories.DataPoint;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestRule;
+import org.junit.runners.Parameterized.Parameter;
 
 public class TestClassTest {
 
@@ -102,76 +99,102 @@ public class TestClassTest {
     	assertThat(values.size(), is(1));
     }
     
-    public static class MethodsAnnotated {
-    	@Ignore
+    public static class ClassWithTwoTestsAndAnAnUnnotatedMethod {
     	@Test
     	public String methodToBeMatched() { 
     		return "jupiter";
     	}
-    	
-    	@Ignore
-    	@Test
-    	public int methodOfWrongType() {
-    		return 0;
-    	}
+
+        @Test
+        public int methodOfWrongType() {
+            return 0;
+        }
+
+        public int methodWithoutAnnotation() {
+            return 0;
+        }
     }
     
     @Test
     public void annotatedMethodValues() {
-    	TestClass tc = new TestClass(MethodsAnnotated.class);
-    	List<String> values = tc.getAnnotatedMethodValues(new MethodsAnnotated(), Ignore.class, String.class);
+        TestClass tc = new TestClass(
+                ClassWithTwoTestsAndAnAnUnnotatedMethod.class);
+        List<String> values = tc.getAnnotatedMethodValues(
+                new ClassWithTwoTestsAndAnAnUnnotatedMethod(), Test.class,
+                String.class);
     	assertThat(values, hasItem("jupiter"));
     	assertThat(values.size(), is(1));
     }
 
     @Test
-    public void annotationToMethods() {
-        TestClass tc = new TestClass(MethodsAnnotated.class);
-        Map<Class<? extends Annotation>, List<FrameworkMethod>> annotationToMethods = tc.getAnnotationToMethods();
-        List<FrameworkMethod> methods = annotationToMethods.get(Ignore.class);
+    public void hasListOfAllAnnotatedMethods() {
+        TestClass tc = new TestClass(
+                ClassWithTwoTestsAndAnAnUnnotatedMethod.class);
+        List<FrameworkMethod> methods = tc.getAnnotatedMethods();
         assertThat(methods.size(), is(2));
     }
 
     @Test
-    public void annotationToMethodsReturnsUnmodifiableMap() {
-        TestClass tc = new TestClass(MethodsAnnotated.class);
-        Map<Class<? extends Annotation>, List<FrameworkMethod>> annotationToMethods = tc.getAnnotationToMethods();
-        exception.expect(UnsupportedOperationException.class);
-        annotationToMethods.put(Ignore.class, null);
+    public void hasUnmodifiableListOfMethods() {
+        TestClass tc = new TestClass(
+                ClassWithTwoTestsAndAnAnUnnotatedMethod.class);
+        List<FrameworkMethod> methods = tc.getAnnotatedMethods();
+        assertListIsUnmodifiable(methods);
     }
 
     @Test
-    public void annotationToMethodsReturnsValuesInTheMapThatAreUnmodifiable() {
-        TestClass tc = new TestClass(MethodsAnnotated.class);
-        Map<Class<? extends Annotation>, List<FrameworkMethod>> annotationToMethods = tc.getAnnotationToMethods();
-        List<FrameworkMethod> methods = annotationToMethods.get(Ignore.class);
-        exception.expect(UnsupportedOperationException.class);
-        methods.add(null);
+    public void hasListOfAllMethodsForSpecificAnnotation() {
+        TestClass tc = new TestClass(
+                ClassWithTwoTestsAndAnAnUnnotatedMethod.class);
+        List<FrameworkMethod> methods = tc.getAnnotatedMethods();
+        assertThat(methods.size(), is(2));
+    }
+
+    @Test
+    public void hasUnmodifiableListOfMethodsForSpecificAnnotation() {
+        TestClass tc = new TestClass(
+                ClassWithTwoTestsAndAnAnUnnotatedMethod.class);
+        List<FrameworkMethod> methods = tc.getAnnotatedMethods(Test.class);
+        assertListIsUnmodifiable(methods);
     }
     
+    private static class ClassWithTwoRuleAndOneParameterField {
+        @Rule
+        public String firstFieldWithRuleAnnotation;
+
+        @Rule
+        public boolean secondFieldWithRuleAnnotation;
+
+        @Parameter
+        public boolean fieldWithParameterAnnotation;
+    }
+
     @Test
-    public void annotationToFields() {
-        TestClass tc = new TestClass(FieldAnnotated.class);
-        Map<Class<? extends Annotation>, List<FrameworkField>> annotationToFields = tc.getAnnotationToFields();
-        List<FrameworkField> fields = annotationToFields.get(Rule.class);
+    public void hasListOfAllAnnotatedFields() {
+        TestClass tc = new TestClass(ClassWithTwoRuleAndOneParameterField.class);
+        List<FrameworkField> fields = tc.getAnnotatedFields();
+        assertThat(fields.size(), is(3));
+    }
+
+    @Test
+    public void hasUnmodifiableListOfFields() {
+        TestClass tc = new TestClass(ClassWithTwoRuleAndOneParameterField.class);
+        List<FrameworkField> fields = tc.getAnnotatedFields();
+        assertListIsUnmodifiable(fields);
+    }
+
+    @Test
+    public void hasListOfAllFieldsForSpecificAnnotation() {
+        TestClass tc = new TestClass(ClassWithTwoRuleAndOneParameterField.class);
+        List<FrameworkField> fields = tc.getAnnotatedFields(Rule.class);
         assertThat(fields.size(), is(2));
     }
 
     @Test
-    public void annotationToFieldsReturnsUnmodifiableMap() {
-        TestClass tc = new TestClass(FieldAnnotated.class);
-        Map<Class<? extends Annotation>, List<FrameworkField>> annotationToFields = tc.getAnnotationToFields();
-        exception.expect(UnsupportedOperationException.class);
-        annotationToFields.put(Rule.class, null);
-    }
-
-    @Test
-    public void annotationToFieldsReturnsValuesInTheMapThatAreUnmodifiable() {
-        TestClass tc = new TestClass(FieldAnnotated.class);
-        Map<Class<? extends Annotation>, List<FrameworkField>> annotationToFields = tc.getAnnotationToFields();
-        List<FrameworkField> fields = annotationToFields.get(Rule.class);
-        exception.expect(UnsupportedOperationException.class);
-        fields.add(null);
+    public void hasUnmodifiableListOfFieldsForSpecificAnnotation() {
+        TestClass tc = new TestClass(ClassWithTwoRuleAndOneParameterField.class);
+        List<FrameworkField> fields = tc.getAnnotatedFields(Rule.class);
+        assertListIsUnmodifiable(fields);
     }
 
     public static class MultipleFieldsAnnotated {
@@ -189,14 +212,16 @@ public class TestClassTest {
     }
 
     @Test
-    public void annotationToFieldsReturnsKeysInADeterministicOrder() {
+    public void annotationToFieldsReturnsFieldsInADeterministicOrder() {
         TestClass tc = new TestClass(MultipleFieldsAnnotated.class);
-        Map<Class<? extends Annotation>, List<FrameworkField>> annotationToFields = tc.getAnnotationToFields();
-        List<Class<? extends Annotation>> keys = new ArrayList<Class<? extends Annotation>>();
-        for (Class<? extends Annotation> annotation : annotationToFields.keySet()) {
-            keys.add(annotation);
-        }
-        assertThat(keys.get(0), CoreMatchers.<Class<? extends Annotation>>is(DataPoint.class));
-        assertThat(keys.get(1), CoreMatchers.<Class<? extends Annotation>>is(Rule.class));
+        List<FrameworkField> annotatedFields = tc.getAnnotatedFields();
+        assertThat(annotatedFields.get(0).getName(), CoreMatchers.equalTo("a"));
+        assertThat(annotatedFields.get(1).getName(), CoreMatchers.equalTo("b"));
+    }
+
+    private <T> void assertListIsUnmodifiable(List<T> list) {
+        exception.expect(UnsupportedOperationException.class);
+        T dummyElement = list.get(0);
+        list.add(dummyElement);
     }
 }

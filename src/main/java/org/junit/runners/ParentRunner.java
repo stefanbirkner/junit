@@ -144,28 +144,28 @@ public abstract class ParentRunner<T> extends Runner implements Filterable,
     }
 
     private void invokeValidatorsOnMethods(List<Throwable> errors) {
-        Map<Class<? extends Annotation>, List<FrameworkMethod>> annotationMap = getTestClass().getAnnotationToMethods();
-        for (Class<? extends Annotation> annotationType : annotationMap.keySet()) {
-            ValidateWith validateWithAnnotation = annotationType.getAnnotation(ValidateWith.class);
-            if (validateWithAnnotation != null) {
-                for (FrameworkMethod frameworkMethod : annotationMap.get(annotationType)) {
+        for (FrameworkMethod method : getTestClass().getAnnotatedMethods()) {
+            for (Annotation annotation : method.getAnnotations()) { 
+                Class<? extends Annotation> annotationType = annotation.annotationType();
+                ValidateWith validateWithAnnotation = annotationType.getAnnotation(ValidateWith.class);
+                if (validateWithAnnotation != null) {
                     AnnotationValidator annotationValidator =
                             fAnnotationValidatorFactory.createAnnotationValidator(validateWithAnnotation);
-                    errors.addAll(annotationValidator.validateAnnotatedMethod(frameworkMethod));
+                    errors.addAll(annotationValidator.validateAnnotatedMethod(method));
                 }
             }
         }
     }
 
     private void invokeValidatorsOnFields(List<Throwable> errors) {
-        Map<Class<? extends Annotation>, List<FrameworkField>> annotationMap = getTestClass().getAnnotationToFields();
-        for (Class<? extends Annotation> annotationType : annotationMap.keySet()) {
-            ValidateWith validateWithAnnotation = annotationType.getAnnotation(ValidateWith.class);
-            if (validateWithAnnotation != null) {
-                for (FrameworkField frameworkField : annotationMap.get(annotationType)) {
+        for (FrameworkField field : getTestClass().getAnnotatedFields()) {
+            for (Annotation annotation : field.getAnnotations()) { 
+                Class<? extends Annotation> annotationType = annotation.annotationType();
+                ValidateWith validateWithAnnotation = annotationType.getAnnotation(ValidateWith.class);
+                if (validateWithAnnotation != null) {
                     AnnotationValidator annotationValidator =
                             fAnnotationValidatorFactory.createAnnotationValidator(validateWithAnnotation);
-                    errors.addAll(annotationValidator.validateAnnotatedField(frameworkField));
+                    errors.addAll(annotationValidator.validateAnnotatedField(field));
                 }
             }
         }

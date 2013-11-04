@@ -1,6 +1,9 @@
 package org.junit.runners.model;
 
 import static java.lang.reflect.Modifier.isStatic;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.unmodifiableList;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
@@ -8,9 +11,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -21,13 +23,13 @@ import org.junit.internal.MethodSorter;
 
 /**
  * Wraps a class to be run, providing method validation and annotation searching
- *
+ * 
  * @since 4.5
  */
 public class TestClass {
     private final Class<?> fClass;
-    private final Map<Class<? extends Annotation>, List<FrameworkMethod>> fMethodsForAnnotations;
-    private final Map<Class<? extends Annotation>, List<FrameworkField>> fFieldsForAnnotations;
+    private final Members<FrameworkField> fFields = new Members<FrameworkField>();
+    private final Members<FrameworkMethod> fMethods = new Members<FrameworkMethod>();
 
     /**
      * Creates a {@code TestClass} wrapping {@code klass}. Each time this
@@ -42,24 +44,16 @@ public class TestClass {
                     "Test class can only have one constructor");
         }
 
-        Map<Class<? extends Annotation>, List<FrameworkMethod>> methodsForAnnotations =
-                new LinkedHashMap<Class<? extends Annotation>, List<FrameworkMethod>>();
-        Map<Class<? extends Annotation>, List<FrameworkField>> fieldsForAnnotations =
-                new LinkedHashMap<Class<? extends Annotation>, List<FrameworkField>>();
-
         for (Class<?> eachClass : getSuperClasses(fClass)) {
             for (Method eachMethod : MethodSorter.getDeclaredMethods(eachClass)) {
-                addToAnnotationLists(new FrameworkMethod(eachMethod), methodsForAnnotations);
+                fMethods.addMemberIfNotShadowed(new FrameworkMethod(eachMethod));
             }
             // ensuring fields are sorted to make sure that entries are inserted
             // and read from fieldForAnnotations in a deterministic order
             for (Field eachField : getSortedDeclaredFields(eachClass)) {
-                addToAnnotationLists(new FrameworkField(eachField), fieldsForAnnotations);
+                fFields.addMemberIfNotShadowed(new FrameworkField(eachField));
             }
         }
-
-        fMethodsForAnnotations = makeDeeplyUnmodifiable(methodsForAnnotations);
-        fFieldsForAnnotations = makeDeeplyUnmodifiable(fieldsForAnnotations);
     }
 
     private static Field[] getSortedDeclaredFields(Class<?> clazz) {
@@ -72,32 +66,15 @@ public class TestClass {
         return declaredFields;
     }
 
-    private static <T extends FrameworkMember<T>> void addToAnnotationLists(T member,
-            Map<Class<? extends Annotation>, List<T>> map) {
-        for (Annotation each : member.getAnnotations()) {
-            Class<? extends Annotation> type = each.annotationType();
-            List<T> members = getAnnotatedMembers(map, type, true);
-            if (member.isShadowedBy(members)) {
-                return;
-            }
-            if (runsTopToBottom(type)) {
-                members.add(0, member);
-            } else {
-                members.add(member);
-            }
-        }
+    /**
+     * Gets all methods that have an annotation in this class or its
+     * superclasses.
+     * 
+     * @since 4.12
+     */
+    public List<FrameworkMethod> getAnnotatedMethods() {
+        return fMethods.getAnnotatedMembers();
     }
-
-    private static <T extends FrameworkMember<T>> Map<Class<? extends Annotation>, List<T>>
-            makeDeeplyUnmodifiable(Map<Class<? extends Annotation>, List<T>> source) {
-        LinkedHashMap<Class<? extends Annotation>, List<T>> copy =
-                new LinkedHashMap<Class<? extends Annotation>, List<T>>();
-        for (Map.Entry<Class<? extends Annotation>, List<T>> entry : source.entrySet()) {
-            copy.put(entry.getKey(), Collections.unmodifiableList(entry.getValue()));
-        }
-        return Collections.unmodifiableMap(copy);
-    }
-
 
     /**
      * Returns, efficiently, all the non-overridden methods in this class and
@@ -105,7 +82,17 @@ public class TestClass {
      */
     public List<FrameworkMethod> getAnnotatedMethods(
             Class<? extends Annotation> annotationClass) {
-        return Collections.unmodifiableList(getAnnotatedMembers(fMethodsForAnnotations, annotationClass, false));
+        return fMethods.getMembersWithAnnotation(annotationClass);
+    }
+
+    /**
+     * Gets all fields that have an annotation in this class or its
+     * superclasses.
+     * 
+     * @since 4.12
+     */
+    public List<FrameworkField> getAnnotatedFields() {
+        return fFields.getAnnotatedMembers();
     }
 
     /**
@@ -114,41 +101,7 @@ public class TestClass {
      */
     public List<FrameworkField> getAnnotatedFields(
             Class<? extends Annotation> annotationClass) {
-        return Collections.unmodifiableList(getAnnotatedMembers(fFieldsForAnnotations, annotationClass, false));
-    }
-
-    /**
-     * Gets a {@code Map} between annotations and methods that have
-     * the annotation in this class or its superclasses.
-     *
-     * @since 4.12
-     */
-    public Map<Class<? extends Annotation>, List<FrameworkMethod>> getAnnotationToMethods() {
-        return fMethodsForAnnotations;
-    }
-
-    /**
-     * Gets a {@code Map} between annotations and fields that have
-     * the annotation in this class or its superclasses.
-     *
-     * @since 4.12
-     */
-    public Map<Class<? extends Annotation>, List<FrameworkField>> getAnnotationToFields() {
-        return fFieldsForAnnotations;
-    }
-
-    private static <T> List<T> getAnnotatedMembers(Map<Class<? extends Annotation>, List<T>> map,
-            Class<? extends Annotation> type, boolean fillIfAbsent) {
-        if (!map.containsKey(type) && fillIfAbsent) {
-            map.put(type, new ArrayList<T>());
-        }
-        List<T> members = map.get(type);
-        return members == null ? Collections.<T>emptyList() : members;
-    }
-
-    private static boolean runsTopToBottom(Class<? extends Annotation> annotation) {
-        return annotation.equals(Before.class)
-                || annotation.equals(BeforeClass.class);
+        return fFields.getMembersWithAnnotation(annotationClass);
     }
 
     private static List<Class<?>> getSuperClasses(Class<?> testClass) {
@@ -179,8 +132,8 @@ public class TestClass {
     }
 
     /**
-     * Returns the only public constructor in the class, or throws an {@code
-     * AssertionError} if there are more or less than one.
+     * Returns the only public constructor in the class, or throws an
+     * {@code AssertionError} if there are more or less than one.
      */
 
     public Constructor<?> getOnlyConstructor() {
@@ -210,7 +163,8 @@ public class TestClass {
                 }
             } catch (IllegalAccessException e) {
                 throw new RuntimeException(
-                        "How did getFields return a field we couldn't access?", e);
+                        "How did getFields return a field we couldn't access?",
+                        e);
             }
         }
         return results;
@@ -226,8 +180,7 @@ public class TestClass {
                     results.add(valueClass.cast(fieldValue));
                 }
             } catch (Throwable e) {
-                throw new RuntimeException(
-                        "Exception in " + each.getName(), e);
+                throw new RuntimeException("Exception in " + each.getName(), e);
             }
         }
         return results;
@@ -235,5 +188,65 @@ public class TestClass {
 
     public boolean isANonStaticInnerClass() {
         return fClass.isMemberClass() && !isStatic(fClass.getModifiers());
+    }
+
+    /**
+     * Controls access to fields or methods.
+     */
+    private static class Members<T extends FrameworkMember<T>> {
+        @SuppressWarnings("unchecked")
+        private static final List<Class<? extends Annotation>> ANNOTATION_TYPES_WITH_REVERSE_ORDER = asList(
+                Before.class, BeforeClass.class);
+        private final List<T> fAnnotatedMembers = new ArrayList<T>();
+        private final Map<Class<?>, List<T>> fMembersWithAnnotation = new HashMap<Class<?>, List<T>>();
+
+        public void addMemberIfNotShadowed(T member) {
+            if (member.getAnnotations().length != 0) {
+                addMember(member);
+            }
+        }
+
+        private void addMember(T member) {
+            if (!member.isShadowedBy(fAnnotatedMembers)) {
+                fAnnotatedMembers.add(member);
+            }
+            for (Annotation annotation : member.getAnnotations()) {
+                addMemberToListOfAnnotationType(member,
+                        annotation.annotationType());
+            }
+        }
+
+        private void addMemberToListOfAnnotationType(T member,
+                Class<?> annotationType) {
+            ensureListOfMembersForAnnotationTypeExists(annotationType);
+            List<T> members = fMembersWithAnnotation.get(annotationType);
+            if (!member.isShadowedBy(members)) {
+                if (ANNOTATION_TYPES_WITH_REVERSE_ORDER
+                        .contains(annotationType)) {
+                    members.add(0, member);
+                } else {
+                    members.add(member);
+                }
+            }
+        }
+
+        private void ensureListOfMembersForAnnotationTypeExists(Class<?> type) {
+            if (!fMembersWithAnnotation.containsKey(type)) {
+                fMembersWithAnnotation.put(type, new ArrayList<T>());
+            }
+        }
+
+        public List<T> getAnnotatedMembers() {
+            return unmodifiableList(fAnnotatedMembers);
+        }
+
+        public List<T> getMembersWithAnnotation(Class<?> annotationType) {
+            List<T> members = fMembersWithAnnotation.get(annotationType);
+            if (members == null) {
+                return emptyList();
+            } else {
+                return unmodifiableList(members);
+            }
+        }
     }
 }
