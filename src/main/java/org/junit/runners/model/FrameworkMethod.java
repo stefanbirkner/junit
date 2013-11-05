@@ -1,9 +1,13 @@
 package org.junit.runners.model;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.internal.runners.model.ReflectiveCallable;
@@ -17,7 +21,9 @@ import org.junit.internal.runners.model.ReflectiveCallable;
  * @since 4.5
  */
 public class FrameworkMethod extends FrameworkMember<FrameworkMethod> {
+    private static final List<Annotation> NO_ANNOTATIONS = emptyList();
     private final Method method;
+    private final List<Annotation> annotations;
 
     /**
      * Returns a new {@code FrameworkMethod} for {@code method}
@@ -28,6 +34,7 @@ public class FrameworkMethod extends FrameworkMember<FrameworkMethod> {
                     "FrameworkMethod cannot be created without an underlying method.");
         }
         this.method = method;
+        this.annotations = collectAnnotationsForMethod(method);
     }
 
     /**
@@ -184,7 +191,7 @@ public class FrameworkMethod extends FrameworkMember<FrameworkMethod> {
      * Returns the annotations on this method
      */
     public Annotation[] getAnnotations() {
-        return method.getAnnotations();
+        return annotations.toArray(new Annotation[annotations.size()]);
     }
 
     /**
@@ -198,5 +205,48 @@ public class FrameworkMethod extends FrameworkMember<FrameworkMethod> {
     @Override
     public String toString() {
         return method.toString();
+    }
+
+    private List<Annotation> collectAnnotationsForMethod(Method method) {
+        List<Annotation> annotations = new ArrayList<Annotation>();
+        for (Class<?> klass = method.getDeclaringClass(); klass != null; klass = klass
+                .getSuperclass()) {
+            addAnnotations(annotations,
+                    getAnnotationForMethodTemplateInClass(method, klass));
+        }
+        return annotations;
+    }
+
+    private List<Annotation> getAnnotationForMethodTemplateInClass(
+            Method methodTemplate, Class<?> klass) {
+        try {
+            Method method = klass.getDeclaredMethod(methodTemplate.getName(),
+                    methodTemplate.getParameterTypes());
+            return asList(method.getAnnotations());
+        } catch (NoSuchMethodException e) {
+            return NO_ANNOTATIONS;
+        } catch (SecurityException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void addAnnotations(List<Annotation> currentAnnotations,
+            List<Annotation> additionalAnnotations) {
+        for (Annotation additionalAnnotation : additionalAnnotations) {
+            if (!containsAnnotationWithType(currentAnnotations,
+                    additionalAnnotation.annotationType())) {
+                currentAnnotations.add(additionalAnnotation);
+            }
+        }
+    }
+
+    private boolean containsAnnotationWithType(List<Annotation> annotations,
+            Class<? extends Annotation> type) {
+        for (Annotation annotation : annotations) {
+            if (annotation.annotationType().equals(type)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
