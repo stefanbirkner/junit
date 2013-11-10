@@ -6,6 +6,7 @@ import static java.util.Collections.emptyList;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
@@ -222,7 +223,11 @@ public class FrameworkMethod extends FrameworkMember<FrameworkMethod> {
         try {
             Method method = klass.getDeclaredMethod(methodTemplate.getName(),
                     methodTemplate.getParameterTypes());
-            return asList(method.getAnnotations());
+            if (!Modifier.isPrivate(method.getModifiers())) {
+                return asList(method.getAnnotations());
+            } else {
+                return NO_ANNOTATIONS;
+            }
         } catch (NoSuchMethodException e) {
             return NO_ANNOTATIONS;
         } catch (SecurityException e) {

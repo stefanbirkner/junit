@@ -123,4 +123,25 @@ public class FrameworkMethodTest {
         assertEquals("Wrong number of annotations.",
                 ((Test) annotations[0]).expected(), NullPointerException.class);
     }
+
+    private static class ClassWithPrivateTest {
+        @Test
+        private void theTestMethod() {
+        }
+    }
+
+    private static class ClassWithoutTest extends ClassWithPrivateTest {
+        @SuppressWarnings("unused")
+        public void theTestMethod() {
+        }
+    }
+
+    @Test
+    public void doesNotRecognizeAnnotationsOnPrivateMethodInSuperclass()
+            throws Exception {
+        Method method = ClassWithoutTest.class.getMethod("theTestMethod");
+        FrameworkMethod frameworkMethod = new FrameworkMethod(method);
+        Annotation[] annotations = frameworkMethod.getAnnotations();
+        assertEquals("Wrong number of annotations.", 0, annotations.length);
+    }
 }
