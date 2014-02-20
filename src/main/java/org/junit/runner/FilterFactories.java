@@ -1,14 +1,16 @@
 package org.junit.runner;
 
 import org.junit.internal.Classes;
+import org.junit.internal.reflection.ObjectFactory;
+import org.junit.runner.FilterFactory.FilterNotCreatedException;
 import org.junit.runner.manipulation.Filter;
-
-import static org.junit.runner.FilterFactory.FilterNotCreatedException;
 
 /**
  * Utility class whose methods create a {@link FilterFactory}.
  */
 public class FilterFactories {
+    private static final ObjectFactory OBJECT_FACTORY = new ObjectFactory();
+
     /**
      * Creates a {@link Filter}.
      *
@@ -75,7 +77,7 @@ public class FilterFactories {
     static FilterFactory createFilterFactory(Class<? extends FilterFactory> filterFactoryClass)
             throws FilterNotCreatedException {
         try {
-            return filterFactoryClass.getConstructor().newInstance();
+            return OBJECT_FACTORY.createObjectWithClass(filterFactoryClass);
         } catch (Exception e) {
             throw new FilterNotCreatedException(e);
         }

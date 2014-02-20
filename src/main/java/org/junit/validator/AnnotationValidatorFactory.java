@@ -2,12 +2,16 @@ package org.junit.validator;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.junit.internal.reflection.ObjectFactory;
+
 /**
  * Creates instances of Annotation Validators.
  *
  * @since 4.12
  */
 public class AnnotationValidatorFactory {
+    private static final ObjectFactory OBJECT_FACTORY = new ObjectFactory();
+
     private static final ConcurrentHashMap<ValidateWith, AnnotationValidator> VALIDATORS_FOR_ANNOTATION_TYPES =
             new ConcurrentHashMap<ValidateWith, AnnotationValidator>();
 
@@ -32,7 +36,8 @@ public class AnnotationValidatorFactory {
             throw new IllegalArgumentException("Can't create validator, value is null in annotation " + validateWithAnnotation.getClass().getName());
         }
         try {
-            AnnotationValidator annotationValidator = clazz.newInstance();
+            AnnotationValidator annotationValidator = OBJECT_FACTORY
+                    .createObjectWithClass(clazz);
             VALIDATORS_FOR_ANNOTATION_TYPES.putIfAbsent(validateWithAnnotation, annotationValidator);
             return VALIDATORS_FOR_ANNOTATION_TYPES.get(validateWithAnnotation);
         } catch (Exception e) {

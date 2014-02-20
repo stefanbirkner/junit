@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
+import org.junit.internal.reflection.ObjectFactory;
 import org.junit.runner.Description;
 import org.junit.runner.Runner;
 import org.junit.runner.manipulation.Filter;
@@ -28,8 +29,9 @@ import org.junit.runners.BlockJUnit4ClassRunner;
  */
 @Deprecated
 public class JUnit4ClassRunner extends Runner implements Filterable, Sortable {
+    private static final ObjectFactory OBJECT_FACTORY = new ObjectFactory();
     private final List<Method> fTestMethods;
-    private TestClass fTestClass;
+    private final TestClass fTestClass;
 
     public JUnit4ClassRunner(Class<?> klass) throws InitializationError {
         fTestClass = new TestClass(klass);
@@ -81,7 +83,8 @@ public class JUnit4ClassRunner extends Runner implements Filterable, Sortable {
     }
 
     protected Object createTest() throws Exception {
-        return getTestClass().getConstructor().newInstance();
+        return OBJECT_FACTORY.createObjectWithClass(getTestClass()
+                .getJavaClass());
     }
 
     protected void invokeTestMethod(Method method, RunNotifier notifier) {

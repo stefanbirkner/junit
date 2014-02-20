@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.junit.internal.reflection.ObjectFactory;
 import org.junit.runner.Runner;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.model.FrameworkField;
@@ -184,6 +185,7 @@ public class Parameterized extends Suite {
     }
 
     protected class TestClassRunnerForParameters extends BlockJUnit4ClassRunner {
+        
         private final Object[] fParameters;
 
         private final String fName;
@@ -214,7 +216,8 @@ public class Parameterized extends Suite {
                 throw new Exception("Wrong number of parameters and @Parameter fields." +
                         " @Parameter fields counted: " + annotatedFieldsByParameter.size() + ", available parameters: " + fParameters.length + ".");
             }
-            Object testClassInstance = getTestClass().getJavaClass().newInstance();
+            Object testClassInstance = OBJECT_FACTORY
+                    .createObjectWithClass(getTestClass().getJavaClass());
             for (FrameworkField each : annotatedFieldsByParameter) {
                 Field field = each.getField();
                 Parameter annotation = field.getAnnotation(Parameter.class);
@@ -294,6 +297,8 @@ public class Parameterized extends Suite {
             return new Annotation[0];
         }
     }
+    
+    private static final ObjectFactory OBJECT_FACTORY = new ObjectFactory();
 
     private static final List<Runner> NO_RUNNERS = Collections.<Runner>emptyList();
 
