@@ -30,6 +30,7 @@ import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.MultipleFailureException;
 import org.junit.runners.model.Statement;
+import org.junit.validator.SinglePublicConstructorValidator;
 import org.junit.validator.TestClassValidator;
 
 /**
@@ -57,6 +58,7 @@ import org.junit.validator.TestClassValidator;
  * @since 4.5
  */
 public class BlockJUnit4ClassRunner extends ParentRunner<FrameworkMethod> {
+    private static final TestClassValidator SINGLE_PUBLIC_CONSTRUCTOR_VALIDATOR = new SinglePublicConstructorValidator();
 
     private final ConcurrentHashMap<FrameworkMethod, Description> methodDescriptions = new ConcurrentHashMap<FrameworkMethod, Description>();
 
@@ -166,6 +168,8 @@ public class BlockJUnit4ClassRunner extends ParentRunner<FrameworkMethod> {
      * different validation rules.
      */
     protected void validateConstructor(List<Throwable> errors) {
+        errors.addAll(SINGLE_PUBLIC_CONSTRUCTOR_VALIDATOR
+                .validateTestClass(getTestClass()));
         validateOnlyOneConstructor(errors);
         validateZeroArgConstructor(errors);
     }
