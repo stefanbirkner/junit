@@ -1,7 +1,11 @@
 package org.junit.runners.parameterized;
 
+import static java.util.Collections.emptyList;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.runner.notification.RunNotifier;
@@ -11,6 +15,8 @@ import org.junit.runners.model.FrameworkField;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.Statement;
+import org.junit.runners.model.TestClass;
+import org.junit.validator.TestClassValidator;
 
 /**
  * A {@link BlockJUnit4ClassRunner} with parameters support. Parameters can be
@@ -24,10 +30,17 @@ public class BlockJUnit4ClassRunnerWithParameters extends
 
     public BlockJUnit4ClassRunnerWithParameters(TestWithParameters test)
             throws InitializationError {
-        super(test.getTestClass().getJavaClass());
+        super(test.getTestClass().getJavaClass(),
+                createAdditionalValidators(test));
         parameters = test.getParameters().toArray(
                 new Object[test.getParameters().size()]);
         name = test.getName();
+    }
+
+    private static List<TestClassValidator> createAdditionalValidators(
+            TestWithParameters test) {
+        return Arrays.<TestClassValidator> asList(new FieldsValidator(test
+                .getParameters()));
     }
 
     @Override
@@ -44,17 +57,8 @@ public class BlockJUnit4ClassRunnerWithParameters extends
     }
 
     private Object createTestUsingFieldInjection() throws Exception {
-        List<FrameworkField> annotatedFieldsByParameter = getAnnotatedFieldsByParameter();
-        if (annotatedFieldsByParameter.size() != parameters.length) {
-            throw new Exception(
-                    "Wrong number of parameters and @Parameter fields."
-                            + " @Parameter fields counted: "
-                            + annotatedFieldsByParameter.size()
-                            + ", available parameters: " + parameters.length
-                            + ".");
-        }
         Object testClassInstance = getTestClass().getJavaClass().newInstance();
-        for (FrameworkField each : annotatedFieldsByParameter) {
+        for (FrameworkField each : getAnnotatedFieldsByParameter()) {
             Field field = each.getField();
             Parameter annotation = field.getAnnotation(Parameter.class);
             int index = annotation.value();
@@ -92,38 +96,6 @@ public class BlockJUnit4ClassRunnerWithParameters extends
     }
 
     @Override
-    protected void validateFields(List<Throwable> errors) {
-        super.validateFields(errors);
-        if (fieldsAreAnnotated()) {
-            List<FrameworkField> annotatedFieldsByParameter = getAnnotatedFieldsByParameter();
-            int[] usedIndices = new int[annotatedFieldsByParameter.size()];
-            for (FrameworkField each : annotatedFieldsByParameter) {
-                int index = each.getField().getAnnotation(Parameter.class)
-                        .value();
-                if (index < 0 || index > annotatedFieldsByParameter.size() - 1) {
-                    errors.add(new Exception("Invalid @Parameter value: "
-                            + index + ". @Parameter fields counted: "
-                            + annotatedFieldsByParameter.size()
-                            + ". Please use an index between 0 and "
-                            + (annotatedFieldsByParameter.size() - 1) + "."));
-                } else {
-                    usedIndices[index]++;
-                }
-            }
-            for (int index = 0; index < usedIndices.length; index++) {
-                int numberOfUse = usedIndices[index];
-                if (numberOfUse == 0) {
-                    errors.add(new Exception("@Parameter(" + index
-                            + ") is never used."));
-                } else if (numberOfUse > 1) {
-                    errors.add(new Exception("@Parameter(" + index
-                            + ") is used more than once (" + numberOfUse + ")."));
-                }
-            }
-        }
-    }
-
-    @Override
     protected Statement classBlock(RunNotifier notifier) {
         return childrenInvoker(notifier);
     }
@@ -139,5 +111,64 @@ public class BlockJUnit4ClassRunnerWithParameters extends
 
     private boolean fieldsAreAnnotated() {
         return !getAnnotatedFieldsByParameter().isEmpty();
+    }
+
+    private static class FieldsValidator implements TestClassValidator {
+        private static final List<Exception> NO_VALIDATION_ERRORS = emptyList();
+
+        private final List<Object> parameters;
+
+        FieldsValidator(List<Object> parameters) {
+            this.parameters = parameters;
+        }
+
+        public List<Exception> validateTestClass(TestClass testClass) {
+            List<FrameworkField> annotatedFields = testClass
+                    .getAnnotatedFields(Parameter.class);
+            if (annotatedFields.isEmpty()) {
+                return NO_VALIDATION_ERRORS;
+            } else {
+                return validateAnnotatedFields(annotatedFields);
+            }
+        }
+
+        private List<Exception> validateAnnotatedFields(
+                List<FrameworkField> fields) {
+            List<Exception> errors = new ArrayList<Exception>();
+            if (fields.size() != parameters.size()) {
+                errors.add(new Exception(
+                        "Wrong number of parameters and @Parameter fields."
+                                + " @Parameter fields counted: "
+                                + fields.size() + ", available parameters: "
+                                + parameters.size() + "."));
+            } else {
+                int[] usedIndices = new int[fields.size()];
+                for (FrameworkField each : fields) {
+                    int index = each.getField().getAnnotation(Parameter.class)
+                            .value();
+                    if (index < 0 || index > fields.size() - 1) {
+                        errors.add(new Exception("Invalid @Parameter value: "
+                                + index + ". @Parameter fields counted: "
+                                + fields.size()
+                                + ". Please use an index between 0 and "
+                                + (fields.size() - 1) + "."));
+                    } else {
+                        usedIndices[index]++;
+                    }
+                }
+                for (int index = 0; index < usedIndices.length; index++) {
+                    int numberOfUse = usedIndices[index];
+                    if (numberOfUse == 0) {
+                        errors.add(new Exception("@Parameter(" + index
+                                + ") is never used."));
+                    } else if (numberOfUse > 1) {
+                        errors.add(new Exception("@Parameter(" + index
+                                + ") is used more than once (" + numberOfUse
+                                + ")."));
+                    }
+                }
+            }
+            return errors;
+        }
     }
 }

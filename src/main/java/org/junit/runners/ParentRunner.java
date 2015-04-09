@@ -1,5 +1,6 @@
 package org.junit.runners;
 
+import static java.util.Collections.emptyList;
 import static org.junit.internal.runners.rules.RuleMemberValidator.CLASS_RULE_METHOD_VALIDATOR;
 import static org.junit.internal.runners.rules.RuleMemberValidator.CLASS_RULE_VALIDATOR;
 
@@ -57,6 +58,7 @@ import org.junit.validator.TestClassValidator;
  */
 public abstract class ParentRunner<T> extends Runner implements Filterable,
         Sortable {
+    private static final List<TestClassValidator> NO_VALIDATORS = emptyList();
     private static final List<TestClassValidator> VALIDATORS = Arrays.asList(
             new AnnotationsValidator(), new PublicClassValidator());
 
@@ -80,9 +82,20 @@ public abstract class ParentRunner<T> extends Runner implements Filterable,
      * Constructs a new {@code ParentRunner} that will run {@code @TestClass}
      */
     protected ParentRunner(Class<?> testClass) throws InitializationError {
-        this.testClass = createTestClass(testClass);
-        validate();
+        this(testClass, NO_VALIDATORS);
     }
+
+    /**
+     * Constructs a new {@code ParentRunner} that will run {@code @TestClass}.
+     * Supports additional validators.
+     */
+    protected ParentRunner(Class<?> testClass,
+            Collection<TestClassValidator> validators)
+            throws InitializationError {
+        this.testClass = createTestClass(testClass);
+        validate(validators);
+    }
+
 
     protected TestClass createTestClass(Class<?> testClass) {
         return new TestClass(testClass);
@@ -159,6 +172,12 @@ public abstract class ParentRunner<T> extends Runner implements Filterable,
     private void validateClassRules(List<Throwable> errors) {
         CLASS_RULE_VALIDATOR.validate(getTestClass(), errors);
         CLASS_RULE_METHOD_VALIDATOR.validate(getTestClass(), errors);
+    }
+
+    private void applyAdditionalValidators(List<Throwable> errors, Collection<TestClassValidator> additionalValidators) {
+        for (TestClassValidator validator : additionalValidators) {
+            errors.addAll(validator.validateTestClass(getTestClass()));
+        }
     }
 
     /**
@@ -411,9 +430,11 @@ public abstract class ParentRunner<T> extends Runner implements Filterable,
     // Private implementation
     //
 
-    private void validate() throws InitializationError {
+    private void validate(Collection<TestClassValidator> additionalValidators)
+            throws InitializationError {
         List<Throwable> errors = new ArrayList<Throwable>();
         collectInitializationErrors(errors);
+        applyAdditionalValidators(errors, additionalValidators);
         if (!errors.isEmpty()) {
             throw new InitializationError(errors);
         }

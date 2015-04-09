@@ -3,6 +3,7 @@ package org.junit.runners;
 import static org.junit.internal.runners.rules.RuleMemberValidator.RULE_METHOD_VALIDATOR;
 import static org.junit.internal.runners.rules.RuleMemberValidator.RULE_VALIDATOR;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -29,6 +30,7 @@ import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.MultipleFailureException;
 import org.junit.runners.model.Statement;
+import org.junit.validator.TestClassValidator;
 
 /**
  * Implements the JUnit 4 standard test case class model, as defined by the
@@ -65,6 +67,17 @@ public class BlockJUnit4ClassRunner extends ParentRunner<FrameworkMethod> {
      */
     public BlockJUnit4ClassRunner(Class<?> testClass) throws InitializationError {
         super(testClass);
+    }
+
+    /**
+     * Creates a BlockJUnit4ClassRunner to run {@code testClass}
+     *
+     * @throws InitializationError if the test class is malformed.
+     */
+    public BlockJUnit4ClassRunner(Class<?> testClass,
+            Collection<TestClassValidator> validators)
+            throws InitializationError {
+        super(testClass, validators);
     }
 
     //
